@@ -17,6 +17,7 @@
 
 ANY .*
 NEWLINE "\n"
+INCLUDE "#include"
 BLOCK_COMMENT_START "/*"
 BLOCK_COMMENT_END "*/"
 ONELINE_COMMENT "//"
@@ -25,7 +26,13 @@ VARIABLE [a-zA-Z_][0-9a-zA-Z_]*
 SPACE [ \r\t\f\v]
 NUMBER [+-]?[0-9]+(\.[0-9]+)?
 CHAR '.'
+ARITHMETIC [+-*/]|"%"|"++"|"--"
+RELATIONAL "=="|"!="|">"|"<"|">="|"<="
+LOGICAL "&&"|"||"|"!"
+BITWISE [&|^~]|">>"|"<<"
+ASSIGNMENT ([+-*/&^|]|">>"|"<<")?"="
 
+%x HEADER
 %x BLOCK_COMMENT
 %x DECLARE
 
@@ -33,6 +40,16 @@ CHAR '.'
 
 {SPACE}* {}
 {NEWLINE} { lineCount++; }
+
+{INCLUDE} { BEGIN HEADER; }
+
+<HEADER>{
+  {SPACE} {}
+  \".+\"|<.+> {
+    printf("#%d: (header) %s\n", lineCount, yytext);
+    BEGIN 0;
+  }
+}
 
 {BLOCK_COMMENT_START} { 
   printf("#%d: block comment start\n", lineCount);
