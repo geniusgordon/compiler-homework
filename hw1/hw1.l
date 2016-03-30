@@ -2,107 +2,104 @@
   #include <stdio.h>
   #include <string.h>
   int lineCount = 1;
-  char dataType[10] = "";
-  char variable[50] = "";
-  char value[50] = "";
-  int initialize = 0;
-  void printVariable() {
-    if (initialize) {
-      printf("#%d: (%s) %s = %s\n", lineCount, dataType, variable, value);
-    } else {
-      printf("#%d: (%s) %s\n", lineCount, dataType, variable);
-    }
+  void print(char* tokenType) {
+    printf("%s(%s) ", yytext, tokenType);
+  }
+  void newLine() {
+    lineCount++;
+    printf("\n#%d: ", lineCount);
   }
 %}
 
 ANY .*
+SEMICOLON ";"
 NEWLINE "\n"
+
 INCLUDE "#include"
+
 BLOCK_COMMENT_START "/*"
 BLOCK_COMMENT_END "*/"
 ONELINE_COMMENT "//"
-DATATYPE "int"|"double"|"char"
-VARIABLE [a-zA-Z_][0-9a-zA-Z_]*
+
+DATATYPE int|double|char
+VOID void
+
+NAME [a-zA-Z_][0-9a-zA-Z_]*
 SPACE [ \r\t\f\v]
-NUMBER [+-]?[0-9]+(\.[0-9]+)?
+NUMBER [+\-]?[0-9]+(\.[0-9]+)?
 CHAR '.'
-ARITHMETIC [+-*/]|"%"|"++"|"--"
+STRING \".*\"
+
+ARITHMETIC [+\-*/]|"%"|"++"|"--"
 RELATIONAL "=="|"!="|">"|"<"|">="|"<="
 LOGICAL "&&"|"||"|"!"
 BITWISE [&|^~]|">>"|"<<"
-ASSIGNMENT ([+-*/&^|]|">>"|"<<")?"="
+ASSIGNMENT ([+\-*/&^|]|">>"|"<<")?=
 
 %x HEADER
 %x BLOCK_COMMENT
-%x DECLARE
 
 %%
 
 {SPACE}* {}
-{NEWLINE} { lineCount++; }
+{SEMICOLON} {}
+[({})] {}
+, {}
+{NEWLINE} { newLine(); }
 
 {INCLUDE} { BEGIN HEADER; }
 
 <HEADER>{
   {SPACE} {}
-  \".+\"|<.+> {
-    printf("#%d: (header) %s\n", lineCount, yytext);
+  ["<]{NAME}\.h[">] {
+    print("header");
     BEGIN 0;
   }
 }
 
 {BLOCK_COMMENT_START} { 
-  printf("#%d: block comment start\n", lineCount);
+  print("comment");
   BEGIN BLOCK_COMMENT; 
 }
 
 <BLOCK_COMMENT>{
-  {ANY}{BLOCK_COMMENT_END} { 
-    printf("#%d: block comment end\n", lineCount);
-    BEGIN 0; 
+  {BLOCK_COMMENT_END} {
+    printf("*/");
+    BEGIN 0;
   }
-  {ANY}
-  {NEWLINE} { lineCount++; }
+  .
+  {NEWLINE} {
+    newLine();
+    printf("(comment)");
+  }
 }
 
 {ONELINE_COMMENT}{ANY} {
-  printf("#%d: one line comment\n", lineCount);
+  printf("//(comment)");
 }
 
-{DATATYPE} {
-  strcpy(dataType, yytext);
-  BEGIN DECLARE;
-}
+return { print("keyword"); }
+if/{SPACE}*\( { print("keyword"); }
+else { print("keyword"); } 
+for/{SPACE}*\( { print("keyword"); } 
+while/{SPACE}*\( { print("keyword"); } 
 
-<DECLARE>{
-  {SPACE} {}
-  {NEWLINE} { lineCount++; }
-  {VARIABLE} {
-    strcpy(variable, yytext);
-  }
-  "=" {
-    initialize = 1;
-  }
-  "," {
-    printVariable();
-    initialize = 0;
-  }
-  ";" {
-    printVariable();
-    initialize = 0;
-    BEGIN 0;
-  }
-  {NUMBER} {
-    strcpy(value, yytext);
-  }
-  {CHAR} {
-    strcpy(value, yytext);
-  }
-}
+{DATATYPE} { print("datatype"); }
+{VOID} { print("void"); }
+
+{NAME}/{SPACE}*\( { print("function"); }
+{NAME} { print("variable"); }
+{NUMBER} { print("number"); }
+{CHAR} { print("character"); }
+{STRING} { print("string"); }
+
+{ARITHMETIC}|{RELATIONAL}|{LOGICAL}|{BITWISE} { print("operator"); }
+{ASSIGNMENT} { print("assignment"); }
 
 %%
 
 int main() {
+  printf("#1: ");
   yylex();
   return 0;
 }

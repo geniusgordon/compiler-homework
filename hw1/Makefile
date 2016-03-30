@@ -5,5 +5,5 @@ flex:
 	flex hw1.l
 
 clean:
-	rm lex.yy.c hw1
+	rm lex.yy.c a.out
 
