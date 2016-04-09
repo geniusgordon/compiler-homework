@@ -98,6 +98,10 @@ while/{SPACE}*\( { print("keyword"); }
 
 %%
 
+int yywrap() {
+  return 1;
+}
+
 int main() {
   printf("#1: ");
   yylex();

@@ -1,5 +1,5 @@
 all: flex
-	gcc lex.yy.c -lfl
+	gcc lex.yy.c
 
 flex:
 	flex hw1.l
